@@ -1,0 +1,1301 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小爱例行数据整理工具小站</title>
+    <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'zpix';
+            src: url('https://cdn.jsdelivr.net/gh/SolidZORO/zpix-pixel-font@master/dist/zpix.ttf') format('truetype');
+            font-display: swap;
+        }
+
+        :root {
+            --bg:          #09090b;
+            --bg-grid:     rgba(150, 140, 120, 0.03);
+            --panel:       #161618;
+            --panel-hover: #1d1d20;
+            --input-bg:    #121214;
+            --border:      #303033;
+            --border-hi:   #434347;
+
+            --ink:         #c8c4b8;
+            --ink-dim:     #706c82;
+            --ink-faint:   #4a4760;
+
+            --gold:        #c8a24e;
+            --gold-bright: #e0bb62;
+            --teal:        #4eb8a0;
+            --rose:        #b86e8e;
+            --violet:      #8070b0;
+
+            --ok:          #4eb880;
+            --warn:        #c8a24e;
+            --err:         #b85858;
+
+            --glow-gold:   rgba(200, 162, 78, 0.25);
+            --glow-teal:   rgba(78, 184, 160, 0.18);
+            --glow-rose:   rgba(184, 110, 142, 0.15);
+
+            --border-img:  none;
+        }
+
+        * {
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            font-family: 'zpix', 'Press Start 2P', monospace !important;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            font-size: 14px;
+            line-height: 1.9;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* --- animated pixel nebula background --- */
+        .nebula {
+            position: fixed;
+            inset: -300px;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 50% 40% at 18% 25%, rgba(200,162,78,0.35), transparent),
+                radial-gradient(ellipse 45% 50% at 82% 72%, rgba(78,184,160,0.28), transparent),
+                radial-gradient(ellipse 40% 35% at 55% 85%, rgba(184,110,142,0.22), transparent),
+                radial-gradient(ellipse 35% 30% at 38% 12%, rgba(128,112,176,0.25), transparent),
+                radial-gradient(ellipse 30% 25% at 70% 40%, rgba(200,162,78,0.15), transparent),
+                var(--bg);
+            animation: nebula-drift 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes nebula-drift {
+            0%   { transform: translate(0, 0)         scale(1);    filter: hue-rotate(0deg);  }
+            100% { transform: translate(-200px, 120px) scale(1.25); filter: hue-rotate(60deg); }
+        }
+
+        /* --- pixel grid mask: chops the nebula into pixel blocks --- */
+        .pixel-grid {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(0deg,   var(--bg) 2px, transparent 2px),
+                linear-gradient(90deg,  var(--bg) 2px, transparent 2px);
+            background-size: 10px 10px;
+        }
+
+        /* --- CRT scanlines --- */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 3px,
+                rgba(200, 190, 170, 0.02) 3px,
+                rgba(200, 190, 170, 0.02) 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scanline-flicker 8s ease-in-out infinite;
+        }
+
+        @keyframes scanline-flicker {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.6; }
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 32px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- pixel-art star decorations (4px pixel unit) --- */
+        .starfield {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .starfield i {
+            position: absolute;
+            display: block;
+            width: 4px;
+            height: 4px;
+            border-radius: 0;
+            background: currentColor;
+        }
+
+        /* small cross star (+) — ~20x20px */
+        .starfield i.s {
+            box-shadow:
+                0 -4px 0 0 currentColor, 0 -8px 0 0 currentColor,
+                0  4px 0 0 currentColor, 0  8px 0 0 currentColor,
+               -4px 0  0 0 currentColor,-8px 0  0 0 currentColor,
+                4px 0  0 0 currentColor, 8px 0  0 0 currentColor;
+            animation: star-twinkle 3s ease-in-out infinite;
+        }
+
+        /* medium sparkle star — ~28x28px */
+        .starfield i.m {
+            box-shadow:
+                0 -4px 0 0 currentColor, 0 -8px 0 0 currentColor, 0 -12px 0 0 currentColor,
+                0  4px 0 0 currentColor, 0  8px 0 0 currentColor, 0  12px 0 0 currentColor,
+               -4px 0  0 0 currentColor,-8px 0  0 0 currentColor,-12px 0  0 0 currentColor,
+                4px 0  0 0 currentColor, 8px 0  0 0 currentColor, 12px 0  0 0 currentColor,
+               -4px -4px 0 0 currentColor, 4px -4px 0 0 currentColor,
+               -4px  4px 0 0 currentColor, 4px  4px 0 0 currentColor;
+            animation: star-sparkle 4s ease-in-out infinite;
+        }
+
+        /* large pixel star (8-point) — ~36x36px */
+        .starfield i.l {
+            box-shadow:
+                0 -4px 0 0 currentColor, 0 -8px 0 0 currentColor, 0 -12px 0 0 currentColor, 0 -16px 0 0 currentColor,
+                0  4px 0 0 currentColor, 0  8px 0 0 currentColor, 0  12px 0 0 currentColor, 0  16px 0 0 currentColor,
+               -4px 0  0 0 currentColor,-8px 0  0 0 currentColor,-12px 0  0 0 currentColor,-16px 0  0 0 currentColor,
+                4px 0  0 0 currentColor, 8px 0  0 0 currentColor, 12px 0  0 0 currentColor, 16px 0  0 0 currentColor,
+               -4px -4px 0 0 currentColor, -8px  -8px 0 0 currentColor, -12px -12px 0 0 currentColor,
+                4px -4px 0 0 currentColor,  8px  -8px 0 0 currentColor,  12px -12px 0 0 currentColor,
+               -4px  4px 0 0 currentColor, -8px   8px 0 0 currentColor, -12px  12px 0 0 currentColor,
+                4px  4px 0 0 currentColor,  8px   8px 0 0 currentColor,  12px  12px 0 0 currentColor;
+            animation: star-glow 5s ease-in-out infinite;
+        }
+
+        @keyframes star-twinkle {
+            0%, 100% { opacity: 0.15; transform: scale(1); }
+            50%      { opacity: 1;    transform: scale(1.5); }
+        }
+
+        @keyframes star-sparkle {
+            0%, 100% { opacity: 0.2;  transform: scale(1) rotate(0deg); }
+            50%      { opacity: 1;    transform: scale(1.3) rotate(45deg); }
+        }
+
+        @keyframes star-glow {
+            0%, 100% { opacity: 0.25; transform: scale(1) rotate(0deg);   filter: drop-shadow(0 0 0px currentColor); }
+            50%      { opacity: 1;    transform: scale(1.2) rotate(22deg); filter: drop-shadow(0 0 6px currentColor); }
+        }
+
+        /* 15 pixel-art stars scattered across the viewport */
+        .starfield i:nth-child(1)  { top:4%;   left:12%;  color:var(--gold);  animation-delay:0s;    }
+        .starfield i:nth-child(2)  { top:9%;   left:58%;  color:var(--gold);  animation-delay:0.8s;  }
+        .starfield i:nth-child(3)  { top:7%;   left:85%;  color:var(--gold);  animation-delay:2.1s;  }
+        .starfield i:nth-child(4)  { top:18%;  left:32%;  color:var(--gold);  animation-delay:0.4s;  }
+        .starfield i:nth-child(5)  { top:22%;  left:72%;  color:var(--gold);  animation-delay:1.6s;  }
+        .starfield i:nth-child(6)  { top:30%;  left:8%;   color:var(--gold);  animation-delay:3.2s;  }
+        .starfield i:nth-child(7)  { top:35%;  left:52%;  color:var(--gold);  animation-delay:0.5s;  }
+        .starfield i:nth-child(8)  { top:38%;  left:90%;  color:var(--gold);  animation-delay:2.5s;  }
+        .starfield i:nth-child(9)  { top:48%;  left:22%;  color:var(--gold);  animation-delay:1.2s;  }
+        .starfield i:nth-child(10) { top:55%;  left:65%;  color:var(--gold);  animation-delay:3.8s;  }
+        .starfield i:nth-child(11) { top:62%;  left:40%;  color:var(--gold);  animation-delay:0.2s;  }
+        .starfield i:nth-child(12) { top:70%;  left:78%;  color:var(--gold);  animation-delay:1.8s;  }
+        .starfield i:nth-child(13) { top:75%;  left:15%;  color:var(--gold);  animation-delay:2.8s;  }
+        .starfield i:nth-child(14) { top:85%;  left:55%;  color:var(--gold);  animation-delay:0.6s;  }
+        .starfield i:nth-child(15) { top:92%;  left:35%;  color:var(--gold);  animation-delay:4.0s;  }
+
+        /* --- Kirby GIF icon --- */
+        .pixel-kirby {
+            display: inline-block;
+            width: 80px;
+            height: 80px;
+            vertical-align: middle;
+            image-rendering: pixelated;
+        }
+
+        /* --- ambient glow pulse on header card --- */
+        @keyframes ambient-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(200,170,90,0.06), 0 8px 24px rgba(0,0,0,0.5); }
+            50%      { box-shadow: 0 0 35px rgba(200,170,90,0.14), 0 0 70px rgba(200,170,90,0.05), 0 8px 24px rgba(0,0,0,0.5); }
+        }
+
+        .nes-container.is-dark.header-card {
+            animation: ambient-glow 5s ease-in-out infinite;
+        }
+
+        /* ====== NES.css full color override ====== */
+
+        /* strip all pixel border-images, use solid borders (except .nes-container which uses gradient border) */
+        .nes-btn,
+        .nes-input,
+        .nes-textarea,
+        .nes-select select,
+        .nes-progress,
+        .nes-balloon,
+        .nes-dialog,
+        input, textarea, select {
+            border-image: none !important;
+            border-style: solid !important;
+        }
+
+        /* containers */
+        .nes-container {
+            border-width: 2px !important;
+            border-style: solid !important;
+            border-color: transparent !important;
+            border-image: linear-gradient(
+                135deg,
+                rgba(200,170,90,0.45),
+                rgba(180,155,80,0.2),
+                rgba(160,140,70,0.12),
+                rgba(200,170,90,0.35)
+            ) 1 !important;
+        }
+
+        .nes-container.is-dark {
+            background: var(--panel) !important;
+            color: var(--ink) !important;
+            margin-bottom: 28px;
+            position: relative;
+            box-shadow:
+                0 0 20px rgba(200,170,90,0.06),
+                0 8px 24px rgba(0,0,0,0.5);
+            transition: box-shadow 0.4s ease, border-image 0.4s ease;
+        }
+
+        .nes-container.is-dark:hover {
+            border-image: linear-gradient(
+                135deg,
+                rgba(210,178,95,0.7),
+                rgba(190,165,85,0.4),
+                rgba(170,148,75,0.25),
+                rgba(210,178,95,0.6)
+            ) 1 !important;
+            box-shadow:
+                0 0 30px rgba(200,170,90,0.12),
+                0 8px 32px rgba(0,0,0,0.6);
+        }
+
+        .nes-container.is-dark.with-title > .title,
+        .nes-container.with-title > .title {
+            background-color: transparent !important;
+            color: var(--gold-bright) !important;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px rgba(200,162,78,0.3);
+            padding: 0 8px !important;
+            margin: -0.5em 0 0 12px !important;
+        }
+
+        /* ====== pixel buttons with animations ====== */
+        @keyframes btn-idle-pulse {
+            0%, 100% { box-shadow: 0 6px 0 var(--btn-shadow), 0 0 0 transparent; }
+            50%      { box-shadow: 0 6px 0 var(--btn-shadow), 0 0 14px var(--btn-glow); }
+        }
+
+        @keyframes btn-shine {
+            0%   { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .nes-btn {
+            --btn-bg: #222226;
+            --btn-bg-hi: #2c2c30;
+            --btn-shadow: #0c0c0e;
+            --btn-glow: rgba(200,190,170,0.06);
+            --btn-border: #3a3a3e;
+
+            border: 3px solid var(--btn-border) !important;
+            border-image: none !important;
+            background: var(--btn-bg) !important;
+            color: var(--ink) !important;
+            box-shadow: 0 6px 0 var(--btn-shadow);
+            padding: 10px 20px !important;
+            font-size: 12px !important;
+            letter-spacing: 1px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.08s, box-shadow 0.15s, background 0.2s;
+            animation: btn-idle-pulse 4s ease-in-out infinite;
+        }
+
+        /* shine sweep on hover */
+        .nes-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                105deg,
+                transparent 35%,
+                rgba(255,255,255,0.06) 45%,
+                rgba(255,255,255,0.1) 50%,
+                rgba(255,255,255,0.06) 55%,
+                transparent 65%
+            );
+            background-size: 200% 100%;
+            background-position: -200% 0;
+            pointer-events: none;
+            transition: none;
+        }
+
+        /* kill NES.css focus rings & active inset shadows */
+        .nes-btn:focus,
+        .nes-btn:focus-visible,
+        .nes-btn.is-primary:focus,
+        .nes-btn.is-warning:focus,
+        .nes-btn.is-success:focus,
+        .nes-btn.is-error:focus,
+        .nes-btn.is-disabled:focus {
+            outline: none !important;
+            box-shadow: 0 6px 0 var(--btn-shadow) !important;
+        }
+
+        .nes-btn:active:not(.is-disabled)::after,
+        .nes-btn.is-primary:active:not(.is-disabled)::after,
+        .nes-btn.is-warning:active:not(.is-disabled)::after,
+        .nes-btn.is-success:active:not(.is-disabled)::after,
+        .nes-btn.is-error:active:not(.is-disabled)::after {
+            box-shadow: none !important;
+        }
+
+        .nes-btn:hover {
+            background: var(--btn-bg-hi) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 var(--btn-shadow), 0 0 20px var(--btn-glow) !important;
+            animation: none;
+        }
+
+        .nes-btn:hover::after {
+            animation: btn-shine 0.6s ease-out forwards;
+        }
+
+        .nes-btn:active {
+            transform: translateY(4px) !important;
+            box-shadow: 0 2px 0 var(--btn-shadow) !important;
+            animation: none !important;
+            transition: transform 0.04s;
+        }
+
+        .nes-btn.is-disabled {
+            opacity: 0.4;
+            animation: none;
+            cursor: not-allowed;
+        }
+
+        /* --- primary (blue) --- */
+        .nes-btn.is-primary {
+            --btn-bg: #183d5e;
+            --btn-bg-hi: #1e4d75;
+            --btn-shadow: #0c2238;
+            --btn-glow: rgba(70,140,210,0.15);
+            --btn-border: #1a4a72;
+            color: #b0d8f4 !important;
+        }
+
+        /* --- warning / active tab (gold) --- */
+        .nes-btn.is-warning {
+            --btn-bg: #8a6a28;
+            --btn-bg-hi: #a07830;
+            --btn-shadow: #4a3810;
+            --btn-glow: rgba(200,162,78,0.25);
+            --btn-border: #9a7a30;
+            color: #fff8e0 !important;
+        }
+
+        /* --- success (green) --- */
+        .nes-btn.is-success {
+            --btn-bg: #1a5a3a;
+            --btn-bg-hi: #1f6a48;
+            --btn-shadow: #0e3820;
+            --btn-glow: rgba(78,184,128,0.18);
+            --btn-border: #1a6a4a;
+            color: #a8ecc8 !important;
+        }
+
+        /* --- error / danger (red) --- */
+        .nes-btn.is-error {
+            --btn-bg: #5a2020;
+            --btn-bg-hi: #6e2a2a;
+            --btn-shadow: #380e0e;
+            --btn-glow: rgba(200,80,80,0.15);
+            --btn-border: #6a2828;
+            color: #f0b0b0 !important;
+        }
+
+        /* inputs & textareas */
+        .nes-input, .nes-textarea,
+        input[type="text"], input[type="number"], textarea, select {
+            border-width: 4px !important;
+            border-color: var(--border) !important;
+            background: var(--input-bg) !important;
+            color: var(--ink) !important;
+            box-shadow: inset 2px 2px 0 rgba(0,0,0,0.3) !important;
+        }
+
+        /* progress bar */
+        .nes-progress {
+            border-width: 4px !important;
+            border-color: var(--border) !important;
+            background-color: #0a0a0c !important;
+        }
+
+        /* nes-list */
+        .nes-list li { color: var(--ink); }
+        .nes-list li::before { color: var(--teal) !important; }
+
+        /* --- header section --- */
+        .page-header {
+            text-align: center;
+            padding: 12px 0 8px;
+        }
+
+        .title-icon-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+
+        .title-icon-row .nes-icon,
+        .title-icon-row i {
+            opacity: 0.7;
+            filter: drop-shadow(0 0 6px var(--glow-gold));
+        }
+
+        .page-title {
+            color: var(--gold-bright);
+            font-size: 20px;
+            margin: 0 0 6px;
+            letter-spacing: 3px;
+            text-shadow:
+                0 0 10px rgba(224, 187, 98, 0.6),
+                0 0 30px rgba(224, 187, 98, 0.3),
+                0 0 60px rgba(224, 187, 98, 0.1),
+                2px 2px 0 rgba(0,0,0,0.9);
+            animation: title-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes title-glow {
+            0%, 100% {
+                text-shadow:
+                    0 0 10px rgba(224, 187, 98, 0.6),
+                    0 0 30px rgba(224, 187, 98, 0.3),
+                    0 0 60px rgba(224, 187, 98, 0.1),
+                    2px 2px 0 rgba(0,0,0,0.9);
+            }
+            50% {
+                text-shadow:
+                    0 0 15px rgba(224, 187, 98, 0.9),
+                    0 0 40px rgba(224, 187, 98, 0.5),
+                    0 0 80px rgba(224, 187, 98, 0.2),
+                    0 0 120px rgba(200, 162, 78, 0.08),
+                    2px 2px 0 rgba(0,0,0,0.9);
+            }
+        }
+
+        .title-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 12px auto;
+            max-width: 400px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .title-divider::before,
+        .title-divider::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.4;
+            animation: divider-shimmer 4s ease-in-out infinite;
+        }
+
+        .title-divider::after {
+            animation-delay: 2s;
+        }
+
+        @keyframes divider-shimmer {
+            0%, 100% { opacity: 0.2; }
+            50%      { opacity: 0.6; }
+        }
+
+        .title-divider span {
+            color: var(--ink-dim);
+            font-size: 8px;
+            letter-spacing: 3px;
+            animation: divider-shimmer 4s ease-in-out infinite;
+            animation-delay: 1s;
+        }
+
+        .page-subtitle {
+            color: var(--ink-dim);
+            font-size: 11px;
+            line-height: 2;
+            margin-top: 8px;
+        }
+
+        /* --- feature list --- */
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0 0;
+        }
+
+        .feature-list li {
+            padding: 6px 0 6px 20px;
+            font-size: 11px;
+            line-height: 2;
+            color: var(--ink);
+            position: relative;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 6px;
+            height: 6px;
+            background: var(--teal);
+            box-shadow: 0 0 6px var(--glow-teal);
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .feature-list li:nth-child(2)::before { background: var(--rose); box-shadow: 0 0 6px var(--glow-rose); }
+        .feature-list li:nth-child(3)::before { background: var(--gold); box-shadow: 0 0 6px var(--glow-gold); }
+
+        .feature-list code {
+            background: rgba(200, 162, 78, 0.08);
+            color: var(--gold);
+            padding: 1px 6px;
+            border: 1px solid rgba(200, 162, 78, 0.2);
+            font-size: 10px;
+        }
+
+        /* --- mode switch tabs --- */
+        .mode-switch {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .mode-button {
+            font-size: 11px;
+        }
+
+        /* --- form fields --- */
+        .field {
+            margin-bottom: 22px;
+        }
+
+        .field label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--gold);
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 8px rgba(200,162,78,0.1);
+        }
+
+        .field .nes-input,
+        .field .nes-textarea,
+        .field .nes-select select,
+        .field input[type="file"],
+        .field input[type="text"],
+        .field input[type="number"],
+        .field textarea,
+        .field select {
+            width: 100%;
+            background: var(--input-bg);
+            color: var(--ink);
+            font-size: 12px;
+            padding: 10px;
+            border-color: var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .field input:focus,
+        .field textarea:focus,
+        .field select:focus {
+            outline: none;
+            border-color: var(--gold) !important;
+            box-shadow: 0 0 0 2px var(--glow-gold), 0 0 16px var(--glow-gold);
+            background: #0d0d1a;
+        }
+
+        /* --- custom file input button --- */
+        .field input[type="file"] {
+            cursor: pointer;
+        }
+
+        .field input[type="file"]::file-selector-button {
+            font-family: 'zpix', 'Press Start 2P', monospace;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--ink);
+            background: #222226;
+            border: 3px solid #3a3a3e;
+            padding: 8px 18px;
+            margin-right: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #0c0c0e;
+            transition: transform 0.08s, box-shadow 0.15s, background 0.2s;
+            position: relative;
+        }
+
+        .field input[type="file"]::file-selector-button:hover {
+            background: #2c2c30;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #0c0c0e, 0 0 16px rgba(200,190,170,0.06);
+        }
+
+        .field input[type="file"]::file-selector-button:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #0c0c0e;
+        }
+
+        .field .nes-select { width: 100%; }
+        .field .nes-select select { width: 100%; appearance: auto; }
+
+        .hint-text {
+            font-size: 10px;
+            color: var(--ink-faint);
+            margin-top: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- action buttons --- */
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .actions .nes-btn {
+            font-size: 11px;
+        }
+
+        /* --- mode panels --- */
+        .mode-panel { display: none; }
+        .mode-panel.active { display: block; }
+
+        /* --- status text --- */
+        .errorlist, .error, .nes-text.is-error {
+            color: var(--err);
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .warning { color: var(--warn); font-weight: 700; }
+        .success, .nes-text.is-success { color: var(--ok); font-weight: 700; }
+
+        /* --- progress --- */
+        .progress-section { margin: 16px 0; }
+
+        .nes-progress { height: 28px; }
+        .nes-progress.is-warning { box-shadow: 0 0 12px var(--glow-gold); }
+
+        .progress-info {
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--ink-dim);
+        }
+
+        .status-line {
+            margin-top: 6px;
+            color: var(--ink-dim);
+            font-size: 11px;
+        }
+
+        /* --- results --- */
+        .result-item {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 2px solid var(--border);
+        }
+
+        .result-item h3 {
+            color: var(--teal);
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 8px var(--glow-teal);
+        }
+
+        .result-item p { font-size: 11px; margin: 5px 0; color: var(--ink); }
+        .result-item ul { padding-left: 20px; font-size: 11px; }
+
+        /* --- download --- */
+        .download-section .nes-btn {
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        /* --- footer --- */
+        .site-footer {
+            text-align: center;
+            margin-top: 24px;
+            padding: 16px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .site-footer span {
+            font-size: 8px;
+            color: var(--ink-faint);
+            letter-spacing: 4px;
+        }
+
+        /* --- lists --- */
+        .nes-list.is-circle li { color: var(--ink); font-size: 12px; }
+
+        /* --- hidden --- */
+        .hidden { display: none !important; }
+
+        /* --- scrollbar --- */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border: 2px solid var(--bg);
+        }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+        /* --- responsive --- */
+        @media (max-width: 720px) {
+            .container { padding: 16px 12px; }
+            .page-title { font-size: 15px; }
+            .title-icon-row { gap: 12px; }
+            .mode-switch { gap: 4px; }
+            .mode-button { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+<div class="nebula"></div>
+<div class="pixel-grid"></div>
+<div class="starfield">
+    <i class="s"></i><i class="m"></i><i class="s"></i><i class="l"></i><i class="s"></i>
+    <i class="m"></i><i class="l"></i><i class="s"></i><i class="m"></i><i class="l"></i>
+    <i class="s"></i><i class="m"></i><i class="s"></i><i class="s"></i><i class="m"></i>
+</div>
+
+<div class="container">
+
+    <!-- Header -->
+    <section class="nes-container is-dark header-card">
+        <div class="page-header">
+            <div class="title-icon-row">
+                <img src="{% static 'sorter/kirby.gif' %}" alt="Kirby" class="pixel-kirby">
+            </div>
+            <h1 class="page-title">小爱例行数据整理工具小站</h1>
+            <div class="title-divider"><span>SESSION TOOL</span></div>
+            <p class="page-subtitle">
+                本工具基于 Django 本地运行，现支持三种网页处理模式
+            </p>
+        </div>
+        <ul class="feature-list">
+            <li><code>Session整理</code> 按 <code>add_session_id</code> 与 <code>timestamp</code> 排序，并按设定行数拆分输出</li>
+            <li><code>Topic废除</code> 按目标日期、<code>RETAIN_RULES</code>、跨垂域保留数输出带 <code>是否废除</code> 的结果</li>
+            <li><code>理想态人力分配</code> 根据规范类别时间与标注员配置，自动将 topic 分配给标注员</li>
+        </ul>
+    </section>
+
+    <!-- Form -->
+    <section class="nes-container is-dark">
+
+        <div class="mode-switch">
+            <button type="button" class="nes-btn {% if active_job_type == 'session_sort' %}is-warning{% endif %} mode-button" data-job-type="session_sort" id="session-mode-button">Session整理</button>
+            <button type="button" class="nes-btn {% if active_job_type == 'topic_abandon' %}is-warning{% endif %} mode-button" data-job-type="topic_abandon" id="topic-mode-button">Topic废除</button>
+            <button type="button" class="nes-btn {% if active_job_type == 'assignment' %}is-warning{% endif %} mode-button" data-job-type="assignment" id="assignment-mode-button">人力分配</button>
+        </div>
+
+        <form method="post" action="{% url 'sorter:process' %}" enctype="multipart/form-data" id="process-form">
+            {% csrf_token %}
+            <input type="hidden" name="job_type" id="job-type-input" value="{{ active_job_type }}">
+
+            {% if session_form.non_field_errors %}
+                <p class="nes-text is-error">{{ session_form.non_field_errors }}</p>
+            {% endif %}
+            {% if topic_form.non_field_errors %}
+                <p class="nes-text is-error">{{ topic_form.non_field_errors }}</p>
+            {% endif %}
+
+            <!-- Session Sort Panel -->
+            <div class="mode-panel {% if active_job_type == 'session_sort' %}active{% endif %}" id="session-panel">
+                <div class="field">
+                    <label for="{{ session_form.files.id_for_label }}">{{ session_form.files.label }}</label>
+                    {{ session_form.files }}
+                    {% if session_form.files.errors %}<p class="nes-text is-error">{{ session_form.files.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ session_form.target_columns_text.id_for_label }}">{{ session_form.target_columns_text.label }}</label>
+                    {{ session_form.target_columns_text }}
+                    <p class="hint-text">建议一行一个字段名，也兼容 Python 列表格式。</p>
+                    {% if session_form.target_columns_text.errors %}<p class="nes-text is-error">{{ session_form.target_columns_text.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ session_form.chunk_size.id_for_label }}">{{ session_form.chunk_size.label }}</label>
+                    {{ session_form.chunk_size }}
+                    {% if session_form.chunk_size.errors %}<p class="nes-text is-error">{{ session_form.chunk_size.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ session_form.missing_column_mode.id_for_label }}">{{ session_form.missing_column_mode.label }}</label>
+                    {{ session_form.missing_column_mode }}
+                    {% if session_form.missing_column_mode.errors %}<p class="nes-text is-error">{{ session_form.missing_column_mode.errors }}</p>{% endif %}
+                </div>
+                <div class="actions">
+                    <button type="submit" class="nes-btn is-primary" id="submit-button">开始处理</button>
+                    <button type="button" class="nes-btn" id="reset-columns-button">恢复默认列</button>
+                    <button type="button" class="nes-btn is-error" id="clear-columns-button">清空列</button>
+                </div>
+            </div>
+
+            <!-- Topic Abandon Panel -->
+            <div class="mode-panel {% if active_job_type == 'topic_abandon' %}active{% endif %}" id="topic-panel">
+                <div class="field">
+                    <label for="topic-files">上传文件</label>
+                    <input type="file" name="files" id="topic-files" accept=".csv,.xls,.xlsx" multiple>
+                    {% if topic_form.files.errors %}<p class="nes-text is-error">{{ topic_form.files.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="topic-target-date">目标日期</label>
+                    <input type="text" name="target_date" id="topic-target-date" class="nes-input" value="{{ topic_form.target_date.value|default:default_topic_target_date }}">
+                    <p class="hint-text">格式：YYYY-MM-DD，例如 2026-02-02</p>
+                    {% if topic_form.target_date.errors %}<p class="nes-text is-error">{{ topic_form.target_date.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ topic_form.topic_order_mode.id_for_label }}">{{ topic_form.topic_order_mode.label }}</label>
+                    {{ topic_form.topic_order_mode }}
+                    <p class="hint-text">可选按行数升序保留 / 随机顺序 / topic排序 / 原始文档顺序</p>
+                    {% if topic_form.topic_order_mode.errors %}<p class="nes-text is-error">{{ topic_form.topic_order_mode.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="topic-cross-domain-count">跨垂域topic保留数量</label>
+                    <input type="number" name="cross_domain_retain_count" id="topic-cross-domain-count" class="nes-input" min="0" value="{{ topic_form.cross_domain_retain_count.value|default:default_cross_domain_retain_count }}">
+                    {% if topic_form.cross_domain_retain_count.errors %}<p class="nes-text is-error">{{ topic_form.cross_domain_retain_count.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="topic-retain-rules">RETAIN_RULES</label>
+                    <textarea name="retain_rules_text" id="topic-retain-rules" class="nes-textarea" rows="18">{{ topic_form.retain_rules_text.value|default:default_retain_rules_text }}</textarea>
+                    <p class="hint-text">每行一条规则，格式：Agent,topic类型,数量</p>
+                    {% if topic_form.retain_rules_text.errors %}<p class="nes-text is-error">{{ topic_form.retain_rules_text.errors }}</p>{% endif %}
+                </div>
+                <div class="actions">
+                    <button type="submit" class="nes-btn is-primary" id="topic-submit-button">开始处理</button>
+                    <button type="button" class="nes-btn" id="reset-rules-button">恢复默认规则</button>
+                </div>
+            </div>
+
+            <!-- Assignment Panel -->
+            <div class="mode-panel {% if active_job_type == 'assignment' %}active{% endif %}" id="assignment-panel">
+                <div class="field">
+                    <label for="assignment-files">上传文件</label>
+                    <input type="file" name="files" id="assignment-files" accept=".csv,.xls,.xlsx" multiple>
+                    {% if assignment_form.files.errors %}<p class="nes-text is-error">{{ assignment_form.files.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="assignment-category-time">规范类别时间配置</label>
+                    <textarea name="category_time_text" id="assignment-category-time" class="nes-textarea" rows="12">{{ assignment_form.category_time_text.value|default:default_category_time_text }}</textarea>
+                    <p class="hint-text">每行一条，格式：类别名,分钟数</p>
+                    {% if assignment_form.category_time_text.errors %}<p class="nes-text is-error">{{ assignment_form.category_time_text.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="assignment-annotators-config">标注员配置</label>
+                    <textarea name="annotators_config_text" id="assignment-annotators-config" class="nes-textarea" rows="8">{{ assignment_form.annotators_config_text.value|default:default_annotators_config_text }}</textarea>
+                    <p class="hint-text">每行一条，格式：标注员名:类别1,类别2,...</p>
+                    {% if assignment_form.annotators_config_text.errors %}<p class="nes-text is-error">{{ assignment_form.annotators_config_text.errors }}</p>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="assignment-target-minutes">每人目标分钟数</label>
+                    <input type="number" name="target_minutes" id="assignment-target-minutes" class="nes-input" min="1" value="{{ assignment_form.target_minutes.value|default:default_target_minutes }}">
+                    {% if assignment_form.target_minutes.errors %}<p class="nes-text is-error">{{ assignment_form.target_minutes.errors }}</p>{% endif %}
+                </div>
+                <div class="actions">
+                    <button type="submit" class="nes-btn is-primary" id="assignment-submit-button">开始分配</button>
+                    <button type="button" class="nes-btn" id="reset-category-button">恢复默认类别</button>
+                    <button type="button" class="nes-btn" id="reset-annotators-button">恢复默认标注员</button>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <!-- Progress -->
+    <section class="nes-container is-dark with-title hidden" id="progress-panel">
+        <h2 class="title">处理进度</h2>
+        <div class="progress-section">
+            <progress class="nes-progress is-warning" value="0" max="100" id="progress-bar"></progress>
+        </div>
+        <p id="progress-text" class="progress-info">正在准备处理任务...</p>
+        <p id="progress-percent" class="progress-info">0%</p>
+        <p id="progress-file" class="status-line"></p>
+        <p id="progress-count" class="status-line"></p>
+    </section>
+
+    <!-- Result -->
+    <section class="nes-container is-dark with-title hidden" id="result-panel">
+        <h2 class="title">处理结果摘要</h2>
+        <ul id="summary-list" class="nes-list is-circle"></ul>
+        <div id="result-items"></div>
+    </section>
+
+    <!-- Download -->
+    <section class="nes-container is-dark with-title hidden download-section" id="download-panel">
+        <h2 class="title">下载结果</h2>
+        <a href="#" id="download-link" class="nes-btn is-success" style="text-decoration:none;">
+            下载处理结果 ZIP
+        </a>
+    </section>
+
+    <footer class="site-footer">
+        <span>PIXEL SESSION TOOL</span>
+    </footer>
+</div>
+
+{{ default_target_columns|json_script:"default-columns" }}
+{{ default_retain_rules_text|json_script:"default-retain-rules" }}
+{{ default_category_time_text|json_script:"default-category-time" }}
+{{ default_annotators_config_text|json_script:"default-annotators" }}
+<script>
+    (function setupModeControls() {
+        const jobTypeInput = document.getElementById('job-type-input');
+        const modes = [
+            { button: document.getElementById('session-mode-button'), panel: document.getElementById('session-panel'), type: 'session_sort' },
+            { button: document.getElementById('topic-mode-button'), panel: document.getElementById('topic-panel'), type: 'topic_abandon' },
+            { button: document.getElementById('assignment-mode-button'), panel: document.getElementById('assignment-panel'), type: 'assignment' },
+        ];
+
+        function activateMode(jobType) {
+            jobTypeInput.value = jobType;
+            modes.forEach(function (m) {
+                const isActive = m.type === jobType;
+                m.button.classList.toggle('is-warning', isActive);
+                m.panel.classList.toggle('active', isActive);
+            });
+        }
+
+        modes.forEach(function (m) {
+            m.button.addEventListener('click', function () {
+                activateMode(m.type);
+            });
+        });
+    })();
+
+    (function setupTargetColumnsControls() {
+        const target = document.getElementById('{{ session_form.target_columns_text.id_for_label }}');
+        const resetButton = document.getElementById('reset-columns-button');
+        const clearButton = document.getElementById('clear-columns-button');
+        const dataNode = document.getElementById('default-columns');
+
+        if (!target || !dataNode) {
+            return;
+        }
+
+        const defaultValue = JSON.parse(dataNode.textContent);
+
+        if (resetButton) {
+            resetButton.addEventListener('click', function () {
+                target.value = defaultValue;
+            });
+        }
+
+        if (clearButton) {
+            clearButton.addEventListener('click', function () {
+                target.value = '';
+            });
+        }
+
+        if (!target.value.trim()) {
+            target.value = defaultValue;
+        }
+    })();
+
+    (function setupTopicRulesControls() {
+        const retainRules = document.getElementById('topic-retain-rules');
+        const resetRulesButton = document.getElementById('reset-rules-button');
+        const dataNode = document.getElementById('default-retain-rules');
+
+        if (!retainRules || !dataNode) {
+            return;
+        }
+
+        const defaultRules = JSON.parse(dataNode.textContent);
+
+        if (resetRulesButton) {
+            resetRulesButton.addEventListener('click', function () {
+                retainRules.value = defaultRules;
+            });
+        }
+
+        if (!retainRules.value.trim()) {
+            retainRules.value = defaultRules;
+        }
+    })();
+
+    (function setupAssignmentControls() {
+        const categoryTextarea = document.getElementById('assignment-category-time');
+        const annotatorsTextarea = document.getElementById('assignment-annotators-config');
+        const resetCategoryBtn = document.getElementById('reset-category-button');
+        const resetAnnotatorsBtn = document.getElementById('reset-annotators-button');
+        const categoryDataNode = document.getElementById('default-category-time');
+        const annotatorsDataNode = document.getElementById('default-annotators');
+
+        if (!categoryDataNode || !annotatorsDataNode) return;
+
+        const defaultCategory = JSON.parse(categoryDataNode.textContent);
+        const defaultAnnotators = JSON.parse(annotatorsDataNode.textContent);
+
+        if (resetCategoryBtn && categoryTextarea) {
+            resetCategoryBtn.addEventListener('click', function () {
+                categoryTextarea.value = defaultCategory;
+            });
+        }
+        if (resetAnnotatorsBtn && annotatorsTextarea) {
+            resetAnnotatorsBtn.addEventListener('click', function () {
+                annotatorsTextarea.value = defaultAnnotators;
+            });
+        }
+    })();
+
+    (function setupProcessProgress() {
+        const form = document.getElementById('process-form');
+        const submitButton = document.getElementById('submit-button');
+        const topicSubmitButton = document.getElementById('topic-submit-button');
+        const assignmentSubmitButton = document.getElementById('assignment-submit-button');
+        const progressPanel = document.getElementById('progress-panel');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressFile = document.getElementById('progress-file');
+        const progressCount = document.getElementById('progress-count');
+        const resultPanel = document.getElementById('result-panel');
+        const summaryList = document.getElementById('summary-list');
+        const resultItems = document.getElementById('result-items');
+        const downloadPanel = document.getElementById('download-panel');
+        const downloadLink = document.getElementById('download-link');
+
+        if (!form) {
+            return;
+        }
+
+        let pollingTimer = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function showProgress() {
+            progressPanel.classList.remove('hidden');
+        }
+
+        function hideOldResults() {
+            resultPanel.classList.add('hidden');
+            downloadPanel.classList.add('hidden');
+            summaryList.innerHTML = '';
+            resultItems.innerHTML = '';
+            downloadLink.href = '#';
+        }
+
+        function setSubmittingState(isSubmitting) {
+            submitButton.disabled = isSubmitting;
+            topicSubmitButton.disabled = isSubmitting;
+            assignmentSubmitButton.disabled = isSubmitting;
+            submitButton.textContent = isSubmitting ? '处理中...' : '开始处理';
+            topicSubmitButton.textContent = isSubmitting ? '处理中...' : '开始处理';
+            assignmentSubmitButton.textContent = isSubmitting ? '处理中...' : '开始分配';
+        }
+
+        function renderSummary(summary) {
+            summaryList.innerHTML = [
+                `<li>总文件数：${escapeHtml(summary.total_files)}</li>`,
+                `<li>成功文件数：${escapeHtml(summary.success_files)}</li>`,
+                `<li>失败文件数：${escapeHtml(summary.failed_files)}</li>`,
+                `<li>总输出文件数：${escapeHtml(summary.total_output_files)}</li>`,
+                `<li>是否存在警告：${summary.has_warning ? '是' : '否'}</li>`
+            ].join('');
+            resultPanel.classList.remove('hidden');
+        }
+
+        function renderMessages(title, items, cssClass) {
+            if (!items || !items.length) {
+                return '';
+            }
+            const inner = items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+            return `
+                <div class="${cssClass}">
+                    <strong>${title}：</strong>
+                    <ul>${inner}</ul>
+                </div>
+            `;
+        }
+
+        function renderResultItems(items) {
+            resultItems.innerHTML = items.map(function (item) {
+                const outputFiles = item.output_files && item.output_files.length
+                    ? `
+                        <div>
+                            <strong>输出文件：</strong>
+                            <ul>${item.output_files.map(name => `<li>${escapeHtml(name)}</li>`).join('')}</ul>
+                        </div>
+                    `
+                    : '';
+
+                return `
+                    <div class="result-item">
+                        <h3>${escapeHtml(item.input_filename)}</h3>
+                        <p>状态：${item.success ? '<span class="nes-text is-success">成功</span>' : '<span class="nes-text is-error">失败</span>'}</p>
+                        <p>输入行数：${escapeHtml(item.input_rows ?? '')}</p>
+                        <p>输出文件数：${escapeHtml((item.output_files || []).length)}</p>
+                        ${outputFiles}
+                        ${renderMessages('警告', item.warnings, 'warning')}
+                        ${renderMessages('错误', item.errors, 'error')}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDownload(downloadUrl, downloadReady) {
+            if (downloadReady && downloadUrl) {
+                downloadLink.href = downloadUrl;
+                downloadPanel.classList.remove('hidden');
+            } else {
+                downloadPanel.classList.add('hidden');
+            }
+        }
+
+        function updateProgress(task) {
+            const percent = Number.isFinite(task.percent) ? task.percent : 0;
+            progressBar.value = percent;
+            progressText.textContent = task.error ? `${task.message}：${task.error}` : (task.message || '处理中');
+            progressPercent.textContent = `${percent}%`;
+            progressFile.textContent = task.current_file ? `当前文件：${task.current_file}` : '';
+            progressCount.textContent = `已完成 ${task.completed_files || 0} / ${task.total_files || 0} 个文件`;
+        }
+
+        function stopPolling() {
+            if (pollingTimer) {
+                clearTimeout(pollingTimer);
+                pollingTimer = null;
+            }
+        }
+
+        function schedulePolling(taskId) {
+            pollingTimer = setTimeout(function () {
+                pollTask(taskId);
+            }, 500);
+        }
+
+        async function pollTask(taskId) {
+            try {
+                const response = await fetch(`/progress/${taskId}/`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const task = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(task.error || '获取进度失败');
+                }
+
+                updateProgress(task);
+
+                if (task.status === 'finished') {
+                    stopPolling();
+                    setSubmittingState(false);
+                    if (task.summary) {
+                        renderSummary(task.summary);
+                    }
+                    renderResultItems(task.result_items || []);
+                    renderDownload(task.download_url, task.download_ready);
+                    return;
+                }
+
+                if (task.status === 'failed') {
+                    stopPolling();
+                    setSubmittingState(false);
+                    return;
+                }
+
+                schedulePolling(taskId);
+            } catch (error) {
+                stopPolling();
+                setSubmittingState(false);
+                progressText.textContent = `获取进度失败：${error.message}`;
+            }
+        }
+
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            stopPolling();
+            hideOldResults();
+            showProgress();
+            updateProgress({
+                message: '正在提交任务...',
+                percent: 0,
+                current_file: '',
+                completed_files: 0,
+                total_files: 0,
+                error: ''
+            });
+            setSubmittingState(true);
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || '提交失败');
+                    }
+                    if (!data.task_id) {
+                        throw new Error('未获取到任务编号');
+                    }
+                    schedulePolling(data.task_id);
+                    return;
+                }
+
+                const html = await response.text();
+                document.open();
+                document.write(html);
+                document.close();
+            } catch (error) {
+                setSubmittingState(false);
+                progressText.textContent = `提交失败：${error.message}`;
+            }
+        });
+    })();
+</script>
+</body>
+</html>
