@@ -29,7 +29,7 @@ echo [信息] 检测到 Python：%PYTHON%
 %PYTHON% --version
 echo.
 
-:: ---- 尝试创建虚拟环境（失败则跳过，直接用全局 Python） ----
+:: ---- 尝试创建虚拟环境 ----
 set USE_VENV=0
 if exist ".venv\Scripts\activate.bat" (
     set USE_VENV=1
@@ -45,16 +45,22 @@ if exist ".venv\Scripts\activate.bat" (
     )
 )
 
+:: ---- 激活虚拟环境后，统一用 python 而不是 py（py 启动器不认虚拟环境） ----
 if "%USE_VENV%"=="1" (
     call .venv\Scripts\activate.bat
+    set PIP=python -m pip
+    set RUN=python
+) else (
+    set PIP=%PYTHON% -m pip
+    set RUN=%PYTHON%
 )
 
 :: ---- 安装依赖（优先从本地 packages 目录离线安装） ----
 echo [信息] 正在安装依赖...
-%PYTHON% -m pip install --no-index --find-links=packages -r requirements.txt --quiet 2>nul
+%PIP% install --no-index --find-links=packages -r requirements.txt --quiet 2>nul
 if errorlevel 1 (
     echo [信息] 本地离线包不兼容当前环境，正在从网络安装...
-    %PYTHON% -m pip install -r requirements.txt --quiet
+    %PIP% install -r requirements.txt --quiet
     if errorlevel 1 (
         echo [错误] 依赖安装失败，请检查 Python 版本或网络连接。
         pause
@@ -75,5 +81,5 @@ echo.
 start "" cmd /c "timeout /t 2 /nobreak >nul && start http://127.0.0.1:8000"
 
 :: ---- 启动 Django ----
-%PYTHON% manage.py runserver
+%RUN% manage.py runserver
 pause
