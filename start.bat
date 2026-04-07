@@ -9,6 +9,10 @@ echo.
 
 cd /d "%~dp0"
 
+:: ---- 清除可能干扰的环境变量 ----
+set PYTHONPATH=
+set PYTHONHOME=
+
 :: ---- 检测 Python ----
 set PYTHON=
 where py >nul 2>&1 && set PYTHON=py
@@ -29,38 +33,35 @@ echo [信息] 检测到 Python：%PYTHON%
 %PYTHON% --version
 echo.
 
-:: ---- 尝试创建虚拟环境 ----
-set USE_VENV=0
-if exist ".venv\Scripts\activate.bat" (
-    set USE_VENV=1
+:: ---- 虚拟环境路径 ----
+set VENV_DIR=%~dp0.venv
+set VENV_PYTHON=%VENV_DIR%\Scripts\python.exe
+set VENV_PIP=%VENV_DIR%\Scripts\python.exe -m pip
+
+:: ---- 创建虚拟环境 ----
+if exist "%VENV_PYTHON%" (
     echo [信息] 虚拟环境已存在。
 ) else (
     echo [信息] 正在创建虚拟环境...
-    %PYTHON% -m venv .venv >nul 2>&1
-    if exist ".venv\Scripts\activate.bat" (
-        set USE_VENV=1
+    %PYTHON% -m venv "%VENV_DIR%" >nul 2>&1
+    if exist "%VENV_PYTHON%" (
         echo [信息] 虚拟环境创建完成。
     ) else (
-        echo [信息] venv 不可用，将直接使用全局 Python 环境。
+        echo [信息] venv 不可用，将直接使用全局 Python。
+        set VENV_PYTHON=%PYTHON%
+        set VENV_PIP=%PYTHON% -m pip
     )
 )
 
-:: ---- 激活虚拟环境后，统一用 python 而不是 py（py 启动器不认虚拟环境） ----
-if "%USE_VENV%"=="1" (
-    call .venv\Scripts\activate.bat
-    set PIP=python -m pip
-    set RUN=python
-) else (
-    set PIP=%PYTHON% -m pip
-    set RUN=%PYTHON%
-)
+echo [信息] 实际使用：%VENV_PYTHON%
+echo.
 
-:: ---- 安装依赖（优先从本地 packages 目录离线安装） ----
+:: ---- 安装依赖（通过绝对路径调用 venv 内的 python，不依赖 PATH） ----
 echo [信息] 正在安装依赖...
-%PIP% install --no-index --find-links=packages -r requirements.txt --quiet 2>nul
+%VENV_PIP% install --no-index --find-links=packages -r requirements.txt --quiet 2>nul
 if errorlevel 1 (
     echo [信息] 本地离线包不兼容当前环境，正在从网络安装...
-    %PIP% install -r requirements.txt --quiet
+    %VENV_PIP% install -r requirements.txt --quiet
     if errorlevel 1 (
         echo [错误] 依赖安装失败，请检查 Python 版本或网络连接。
         pause
@@ -80,6 +81,6 @@ echo.
 :: ---- 延迟打开浏览器 ----
 start "" cmd /c "timeout /t 2 /nobreak >nul && start http://127.0.0.1:8000"
 
-:: ---- 启动 Django ----
-%RUN% manage.py runserver
+:: ---- 用 venv 内的 python 绝对路径启动 Django ----
+"%VENV_PYTHON%" manage.py runserver
 pause
